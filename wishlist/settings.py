@@ -23,9 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '3*5+g(sb+0dq*4m_cf@oedqyf$-$3%qcmtwu+6t=hkg#=r4+7p'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if os.getenv('GAE_INSTANCE'):
+    DEBUG = False
+else:
+    DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 LOGIN_URL = '/admin'
 # Application definition
@@ -76,10 +79,19 @@ WSGI_APPLICATION = 'wishlist.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'places',
+        'USER': 'traveler',
+        'PASSWORD': os.getenv('TRAVELER_PW'),
+        'HOST': '/cloudsql/wishlist-retry:us-central1:wishlist-database',
+        'PORT': '5432'
     }
 }
+
+# if not running at GAE, then use local
+# computer to connect using cloud_sql_proxy
+if not os.getenv('GAE_INSTANCE'):
+    DATABASES['default']['HOST'] = '127.0.0.1'
 
 
 # Password validation
@@ -121,10 +133,28 @@ USE_TZ = True
 # Specify a location to copy static files to when running python manage.py collectstatic
 STATIC_ROOT = os.path.join(BASE_DIR, 'www', 'static')
 
-STATIC_URL = '/static/'
+# STATIC_URL = '/static/'
 
 # Media URL, for user-created media - becomes part of URL when images are displayed
-MEDIA_URL = '/media/'
+# MEDIA_URL = '/media/'
 
 # Where in the file system to save user-uploaded files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if os.getenv('GAE_INSTANCE'):
+    # google cloud app engine
+    GS_STATIC_FILE_BUCKET = 'wishlist-retry.appspot.com'
+
+    STATIC_URL = f'https://storage.cloud.google.com/{GS_STATIC_FILE_BUCKET}/static/'
+
+    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    GS_BUCKET_NAME = 'wishlist-retry-user-images'
+    MEDIA_URL = f'https://storage.cloud.google.com/{GS_BUCKET_NAME}/media/'
+
+    from google.oauth2 import service_account
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file('wishlist-retry-second.json')
+
+else:
+    # local development
+    STATIC_URL = '/static/'
+    MEDIA_URL = '/media/'

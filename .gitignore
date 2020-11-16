@@ -3,3 +3,7 @@ __pycache__
 db.sqlite3
 venv
 .vscode/
+env
+wishlist-retry-second.json
+app.yaml
+www/
